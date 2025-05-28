@@ -15,29 +15,8 @@ jobs:
     - name: Notify Slack
       uses: 8398a7/action-slack@v3
       with:
-        status: success
+        status: custom
         channel: '#ci-notifications'
-        message: |
-          ✅ Tests passed successfully!
-          Repository: ${{ github.repository }}
-          Branch: ${{ github.ref_name }}
-          Commit: ${{ github.sha }}
-          Author: ${{ github.actor }}
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     
-    - name: Notify Slack on Failure
-      if: needs.test.result == 'failure'
-      uses: 8398a7/action-slack@v3
-      with:
-        status: failure
-        channel: '#ci-notifications'
-        message: |
-          ❌ Tests failed!
-          Repository: ${{ github.repository }}
-          Branch: ${{ github.ref_name }}
-          Commit: ${{ github.sha }}
-          Author: ${{ github.actor }}
-          Please check the workflow run for details.
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
