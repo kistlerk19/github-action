@@ -1,0 +1,91 @@
+name: CI Pipeline
+
+# Trigger workflow on push to main branch and pull requests
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        # Adjust based on your project language/runtime
+        node-version: [18.x, 20.x]
+        # For Python: python-version: [3.8, 3.9, 3.10]
+        # For Java: java-version: [11, 17]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Node.js setup (adjust for your language)
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    # Install dependencies (adjust command for your package manager)
+    - name: Install dependencies
+      run: npm ci
+    
+    # Run linting (optional)
+    - name: Run linter
+      run: npm run lint
+      continue-on-error: true
+    
+    # Run tests
+    - name: Run tests
+      run: npm test
+    
+    # Generate test coverage (optional)
+    - name: Generate coverage report
+      run: npm run test:coverage
+      continue-on-error: true
+    
+    # Upload coverage to Codecov (optional)
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      if: matrix.node-version == '20.x'
+      continue-on-error: true
+
+  notify:
+    needs: test
+    runs-on: ubuntu-latest
+    if: always() # Run even if tests fail
+    
+    steps:
+    - name: Notify Slack on Success
+      if: needs.test.result == 'success'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        channel: '#ci-notifications'
+        message: |
+          ✅ Tests passed successfully!
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          Author: ${{ github.actor }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    
+    - name: Notify Slack on Failure
+      if: needs.test.result == 'failure'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        channel: '#ci-notifications'
+        message: |
+          ❌ Tests failed!
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          Author: ${{ github.actor }}
+          Please check the workflow run for details.
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
